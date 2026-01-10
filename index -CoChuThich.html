@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luyện Tập Thảo Thư</title>
+    <style>
+        :root {
+            --primary-color: #8B4513;
+            --accent-color: #D2B48C;
+            --bg-color: #383135;
+            --success: #27ae60;
+            --error: #e74c3c;
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; }
+        
+        body {
+            background-color: var(--bg-color);
+            margin: 0; padding: 20px;
+            padding-bottom: 180px; /* Khoảng trống để không bị thanh nổi che */
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px; margin: 0 auto; background: white;
+            border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            padding: 20px; min-height: 400px;
+        }
+
+        /* ---------------------------------------------------------
+           1. MÀU SẮC Ô MA TRẬN KHI KHÔNG CÓ ẢNH (FALLBACK)
+           --------------------------------------------------------- */
+        .hanzi-cell .fallback-text {
+            font-size: 40px;
+            color: #545B47;              /* <-- MÀU CHỮ HÁN thay thế */
+            background-color: #E9E7CD;   /* <-- MÀU NỀN CỦA Ô khi không có ảnh */
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+        }
+		/* Chú thích chữ ở góc trên bên trái */
+		.hanzi-cell {
+			position: relative; /* Cần thiết để định vị con .annotation */
+		}
+		.hanzi-cell .annotation {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 16.66%;      /* Chiếm 1/6 độ rộng ô (100/6) */
+			height: 16.66%;     /* Chiếm 1/6 chiều cao ô */
+			background: rgba(242, 240, 214, 1); /* Nền hơi trong suốt để dễ nhìn */
+			color: #38761d;     /* Màu chữ chú thích */
+			font-size: 10px;    /* Kích thước chữ nhỏ */
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			border-right: 0.5px solid #eee;
+			border-bottom: 0.5px solid #eee;
+			pointer-events: none; /* Không ngăn cản click vào ô */
+			z-index: 10;
+		}
+        /* ---------------------------------------------------------
+           2. KHOẢNG CÁCH CỤM TRẮC NGHIỆM SO VỚI LỀ TRÊN
+           --------------------------------------------------------- */
+        #quizSection { 
+            display: none; 
+            flex-direction: column; 
+            align-items: center; 
+            width: 100%; 
+            margin-top: 20px;           /* <-- ĐIỀU CHỈNH KHOẢNG CÁCH LỀ TRÊN TẠI ĐÂY (Vd: 20px, 50px...) */
+        }
+
+        /* Mã nguồn bổ trợ khác */
+        textarea {
+            width: 100%; height: 80px; padding: 15px;
+            border: 2px solid var(--accent-color); border-radius: 10px;
+            font-size: 18px; background: #FFF8DC; margin-bottom: 20px;
+        }
+
+        .matrix-grid {
+            display: grid; grid-template-columns: repeat(7, 100px);
+            gap: 0; border: 1px solid var(--accent-color);
+            width: fit-content; margin: 0 auto; background: white;
+        }
+		#matrixContainer {
+			width: fit-content;   /* Quan trọng: Bắt container chỉ rộng bằng ma trận */
+			margin: 20px auto;    /* Căn giữa trên màn hình */
+			background: white;    /* Đảm bảo nền trắng khi chụp */
+			line-height: 0;       /* Loại bỏ khoảng hở dòng nhỏ ở dưới ảnh */
+			padding: 2px;         /* Tạo một đường viền trắng cực nhỏ để không bị cắt sát sạt */
+		}
+        .hanzi-cell {
+            width: 100px; height: 100px; border: 0.5px solid #b6d7a8;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .hanzi-cell img { width: 100%; height: 100%; object-fit: contain; }
+
+        /* Floating Bottom Menu */
+        .floating-menu {
+            position: fixed; bottom: 20px; left: 50%;
+            transform: translateX(-50%);
+            z-index: 3000; width: 95%; max-width: 500px;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+
+        /* ---------------------------------------------------------
+           3. KÍCH THƯỚC THANH ĐIỀU HƯỚNG TRẮC NGHIỆM (THANH NỔI)
+           --------------------------------------------------------- */
+		#quizNavArea {
+			display: none; /* Sẽ được JS chuyển thành flex */
+			background: rgba(255, 255, 255, 0.95);
+			padding: 10px 20px;
+			border-radius: 30px;
+			box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+			
+			/* Căn giữa các phần tử bên trong thanh */
+			align-items: center; 
+			justify-content: space-between;
+			
+			border: 1px solid var(--accent-color);
+			
+			/* CĂN GIỮA CHÍNH THANH NÀY */
+			width: 60%;           /* Độ rộng bạn đã chọn */
+			margin: 0 auto;       /* Đẩy lề trái và phải tự động để vào giữa */
+		}
+
+        .nav-arrow {
+            background: #322c2f; color: white; border: none;
+            width: 40px; height: 40px;  /* <-- KÍCH THƯỚC NÚT < và > */
+            border-radius: 50%; cursor: pointer; font-weight: bold;
+        }
+
+        /* Main Action Buttons */
+        .main-buttons {
+            background: rgba(255, 255, 255, 0.98);
+            padding: 10px 15px; border-radius: 50px;
+            display: flex; gap: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            border: 1px solid #ddd;
+        }
+
+        .main-buttons button {
+            flex: 1; padding: 12px 5px; border: none; border-radius: 25px;
+            font-weight: bold; cursor: pointer; color: white; transition: 0.2s;
+            font-size: 13px; text-transform: uppercase;
+        }
+
+        #btnCreate { background: #322c2f; }
+        #btnCapture { background: #322c2f; }
+        #btnQuiz { background: #322c2f; }
+
+        /* Quiz UI Elements */
+        .quiz-card {
+            aspect-ratio: 1 / 1; 
+            width: 100%; max-width: 300px;
+            margin: 0 auto 20px auto;
+            border: 3px solid var(--accent-color); border-radius: 15px;
+            display: flex; align-items: center; justify-content: center; overflow: hidden;
+        }
+        .quiz-card img { width: 100%; height: 100%; object-fit: contain; padding: 10px; }
+
+        .options-container { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 350px; }
+        .option-btn {
+            padding: 14px; font-size: 24px; border: 2px solid #eee;
+            border-radius: 12px; background: #fff; cursor: pointer;
+        }
+        .option-btn.correct { background: var(--success) !important; color: white; }
+        .option-btn.wrong { background: var(--error) !important; color: white; }
+
+        /* Responsive Mobile */
+        @media (max-width: 768px) {
+            .matrix-grid { grid-template-columns: repeat(7, 1fr) !important; width: 100% !important; }
+            .hanzi-cell { width: auto !important; height: auto !important; aspect-ratio: 1/1; }
+            .hanzi-cell .fallback-text { font-size: 5vw; }
+            .quiz-card { 
+        width: 70vw;           /* Chiếm 70% chiều ngang màn hình */
+        height: auto;          /* Để height tự động tính toán theo aspect-ratio */
+        aspect-ratio: 1 / 1;   /* Ép khung luôn vuông tuyệt đối */
+        max-width: 280px;      /* Giới hạn kích thước tối đa để không quá to */
+    }
+            #quizSection { margin-top: 90px; } /* Lề trên trắc nghiệm trên mobile */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="mainView">
+            <h1 style="color:var(--primary-color); text-align:center; font-size:1.2rem;">TẬP TỰ THẢO THƯ</h1>
+            <textarea id="hanziInput" placeholder="Nhập chữ Hán tại đây...">書法藝術</textarea>
+            <div id="matrixContainer"><div id="matrixContent"></div></div>
+        </div>
+
+        <div id="quizSection">
+            <div class="quiz-card" id="quizImageContainer"></div>
+            <div class="options-container" id="quizOptions"></div>
+        </div>
+    </div>
+
+    <div class="floating-menu">
+        <div id="quizNavArea">
+            <button class="nav-arrow" id="prevQuiz">&lt;</button>
+            <div class="quiz-counter" style="font-weight: bold;">
+                Câu <input type="number" id="currentIdxInput" min="1" style="width:45px; text-align:center; border:1px solid #ccc;">
+                / <span id="totalQuiz">0</span>
+            </div>
+            <button class="nav-arrow" id="nextQuiz">&gt;</button>
+        </div>
+
+        <div class="main-buttons">
+            <button id="btnCreate">TẠO</button>
+            <button id="btnCapture">CHỤP</button>
+            <button id="btnQuiz">TRẮC NGHIỆM</button>
+        </div>
+    </div>
+
+    <audio id="sndDung" src="Dung.mp3"></audio>
+    <audio id="sndSai" src="Sai.mp3"></audio>
+
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script>
+        const imageDir = 'image/';
+        const ext = '.png';
+        let quizList = [];
+        let currentQuizIdx = 0;
+        let validCharsWithImages = [];
+
+        // HÀM TẠO MA TRẬN & KIỂM TRA ẢNH
+        async function generateMatrix() {
+            showView('main');
+            const rawText = document.getElementById('hanziInput').value.trim();
+            const content = document.getElementById('matrixContent');
+            content.innerHTML = '';
+            validCharsWithImages = []; 
+
+            if (!rawText) return;
+
+            const grid = document.createElement('div');
+            grid.className = 'matrix-grid';
+            const chars = rawText.replace(/\s/g, '').split('');
+
+            for (const char of chars) {
+                const cell = await createCell(char);
+                grid.appendChild(cell);
+            }
+            // Điền ô trống cho đủ hàng 7
+            const remainder = chars.length % 7;
+            if (remainder !== 0) {
+                for (let i = 0; i < 7 - remainder; i++) grid.appendChild(await createCell('', true));
+            }
+            content.appendChild(grid);
+        }
+
+        async function createCell(char, isBlank = false) {
+    const cell = document.createElement('div');
+    cell.className = 'hanzi-cell';
+    
+    // Tạo phần ảnh
+    const img = document.createElement('img');
+    img.src = isBlank ? `${imageDir}OTrong${ext}` : `${imageDir}${encodeURIComponent(char)}${ext}`;
+    
+    return new Promise((resolve) => {
+        img.onload = () => {
+            if(!isBlank) {
+                validCharsWithImages.push(char);
+                // THÊM CHÚ THÍCH VÀO ĐÂY
+                const anno = document.createElement('div');
+                anno.className = 'annotation';
+                anno.textContent = char;
+                cell.appendChild(anno);
+            }
+            cell.appendChild(img);
+            resolve(cell);
+        };
+        img.onerror = () => {
+            if(!isBlank) {
+                cell.innerHTML = `<div class="fallback-text">${char}</div>`;
+            }
+            resolve(cell);
+        };
+    });
+}
+
+        // HÀM CHỤP ẢNH
+				function capture() {
+			showView('main');
+			const container = document.getElementById('matrixContainer');
+			
+			// Sử dụng scale để tăng độ nét, logging: false để không hiện thông báo rác
+			html2canvas(container, { 
+				scale: 2,
+				backgroundColor: "#ffffff", // Ép nền trắng
+				logging: false,
+				useCORS: true               // Hỗ trợ nếu bạn dùng ảnh từ server khác
+			}).then(canvas => {
+				const link = document.createElement('a');
+				link.download = 'thao-thu.png';
+				link.href = canvas.toDataURL('image/png');
+				link.click();
+			});
+		}
+
+        // HÀM TRẮC NGHIỆM
+        function startQuiz() {
+            const uniqueValidChars = [...new Set(validCharsWithImages)];
+            if (uniqueValidChars.length === 0) return alert("Vui lòng nhấn TẠO trước!");
+
+            quizList = uniqueValidChars.map(char => ({ 
+                char: char,
+                options: generateOptions(char, uniqueValidChars)
+            }));
+            quizList.sort(() => Math.random() - 0.5); // Đảo lộn trật tự câu hỏi
+            
+            currentQuizIdx = 0;
+            document.getElementById('totalQuiz').textContent = quizList.length;
+            showView('quiz');
+            showQuestion();
+        }
+
+        function generateOptions(correctChar, allChars) {
+            let opts = [correctChar];
+            let pool = allChars.filter(c => c !== correctChar).sort(() => Math.random() - 0.5);
+            opts.push(...pool.slice(0, 2));
+            while(opts.length < 3) opts.push("?");
+            return opts.sort(() => Math.random() - 0.5);
+        }
+
+        function showQuestion() {
+            const current = quizList[currentQuizIdx];
+            document.getElementById('currentIdxInput').value = currentQuizIdx + 1;
+            
+            const imgCont = document.getElementById('quizImageContainer');
+            imgCont.innerHTML = `<img src="${imageDir}${encodeURIComponent(current.char)}${ext}">`;
+
+            const optCont = document.getElementById('quizOptions');
+            optCont.innerHTML = '';
+            current.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = opt;
+                btn.onclick = () => checkAnswer(opt, current.char, btn);
+                optCont.appendChild(btn);
+            });
+
+            document.getElementById('prevQuiz').disabled = currentQuizIdx === 0;
+            document.getElementById('nextQuiz').disabled = currentQuizIdx === quizList.length - 1;
+        }
+
+        function checkAnswer(selected, correct, btn) {
+            if (selected === correct) {
+                btn.classList.add('correct');
+                document.getElementById('sndDung').play();
+                setTimeout(() => {
+                    if (currentQuizIdx < quizList.length - 1) {
+                        currentQuizIdx++;
+                        showQuestion();
+                    } else alert("Bạn đã hoàn thành chữ cuối cùng!");
+                }, 600);
+            } else {
+                btn.classList.add('wrong');
+                document.getElementById('sndSai').play();
+                setTimeout(() => {
+                    btn.classList.remove('wrong');
+                    quizList[currentQuizIdx].options.sort(() => Math.random() - 0.5);
+                    showQuestion();
+                }, 600);
+            }
+        }
+
+        // Điều hướng tự do
+        document.getElementById('prevQuiz').onclick = () => { if(currentQuizIdx > 0) { currentQuizIdx--; showQuestion(); }};
+        document.getElementById('nextQuiz').onclick = () => { if(currentQuizIdx < quizList.length - 1) { currentQuizIdx++; showQuestion(); }};
+        document.getElementById('currentIdxInput').onchange = (e) => {
+            let val = parseInt(e.target.value) - 1;
+            if (val >= 0 && val < quizList.length) { currentQuizIdx = val; showQuestion(); }
+            else e.target.value = currentQuizIdx + 1;
+        };
+
+        function showView(view) {
+            const isQuiz = (view === 'quiz');
+            document.getElementById('mainView').style.display = isQuiz ? 'none' : 'block';
+            document.getElementById('quizSection').style.display = isQuiz ? 'flex' : 'none';
+            document.getElementById('quizNavArea').style.display = isQuiz ? 'flex' : 'none';
+        }
+
+        document.getElementById('btnCreate').onclick = generateMatrix;
+        document.getElementById('btnCapture').onclick = capture;
+        document.getElementById('btnQuiz').onclick = startQuiz;
+    </script>
+</body>
+</html>
