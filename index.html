@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Luyện Tập Thảo Thư</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root {
             --primary-color: #8B4513;
@@ -28,6 +29,42 @@
             padding: 20px; min-height: 400px;
         }
 
+        /* Khung hiển thị mô phỏng trang giấy A4 khi xem trên web và phân trang khi in */
+        .page-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background: transparent;
+        }
+
+        .a4-page {
+            width: 210mm;
+            min-height: 296mm;
+            background: white;
+            padding: 15mm;
+            box-sizing: border-box;
+            margin: 0 auto;
+            position: relative;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .workspace {
+            display: flex;
+            flex-direction: column;
+            gap: 0px;
+        }
+
+        /* Định dạng cụm cặp dòng (1 Dòng mẫu + 1 Dòng trống) */
+        .grid-row-pair {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 15px; /* Khoảng cách giữa các cụm tập viết */
+            page-break-inside: avoid; /* Tránh việc cụm dòng bị cắt đôi khi phân trang */
+        }
+
         /* ---------------------------------------------------------
            1. MÀU SẮC Ô MA TRẬN KHI KHÔNG CÓ ẢNH (FALLBACK)
            --------------------------------------------------------- */
@@ -38,27 +75,30 @@
             width: 100%; height: 100%;
             display: flex; align-items: center; justify-content: center;
         }
-		/* Chú thích chữ ở góc trên bên trái */
-		.hanzi-cell {
-			position: relative; /* Cần thiết để định vị con .annotation */
-		}
-		.hanzi-cell .annotation {
-			position: absolute;
-			top: 0;
-			left: 0;
-			width: 16.66%;      /* Chiếm 1/6 độ rộng ô (100/6) */
-			height: 16.66%;     /* Chiếm 1/6 chiều cao ô */
-			background: rgba(242, 240, 214, 1); /* Nền hơi trong suốt để dễ nhìn */
-			color: #38761d;     /* Màu chữ chú thích */
-			font-size: 10px;    /* Kích thước chữ nhỏ */
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			border-right: 0.5px solid #eee;
-			border-bottom: 0.5px solid #eee;
-			pointer-events: none; /* Không ngăn cản click vào ô */
-			z-index: 10;
-		}
+
+        /* Chú thích chữ ở góc trên bên trái */
+        .hanzi-cell {
+            position: relative; /* Cần thiết để định vị con .annotation */
+        }
+        
+        .hanzi-cell .annotation {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 16.66%;      /* Chiếm 1/6 độ rộng ô (100/6) */
+            height: 16.66%;     /* Chiếm 1/6 chiều cao ô */
+            background: rgba(242, 240, 214, 1); /* Nền hơi trong suốt để dễ nhìn */
+            color: #38761d;     /* Màu chữ chú thích */
+            font-size: 10px;    /* Kích thước chữ nhỏ */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-right: 0.5px solid #eee;
+            border-bottom: 0.5px solid #eee;
+            pointer-events: none; /* Không ngăn cản click vào ô */
+            z-index: 10;
+        }
+
         /* ---------------------------------------------------------
            2. KHOẢNG CÁCH CỤM TRẮC NGHIỆM SO VỚI LỀ TRÊN
            --------------------------------------------------------- */
@@ -67,7 +107,7 @@
             flex-direction: column; 
             align-items: center; 
             width: 100%; 
-            margin-top: 20px;           /* <-- ĐIỀU CHỈNH KHOẢNG CÁCH LỀ TRÊN TẠI ĐÂY (Vd: 20px, 50px...) */
+            margin-top: 20px;           /* <-- ĐIỀU CHỈNH KHOẢNG CÁCH LỀ TRÊN TẠI ĐÂY */
         }
 
         /* Mã nguồn bổ trợ khác */
@@ -82,13 +122,15 @@
             gap: 0; border: 1px solid var(--accent-color);
             width: fit-content; margin: 0 auto; background: white;
         }
-		#matrixContainer {
-			width: fit-content;   /* Quan trọng: Bắt container chỉ rộng bằng ma trận */
-			margin: 20px auto;    /* Căn giữa trên màn hình */
-			background: white;    /* Đảm bảo nền trắng khi chụp */
-			line-height: 0;       /* Loại bỏ khoảng hở dòng nhỏ ở dưới ảnh */
-			padding: 2px;         /* Tạo một đường viền trắng cực nhỏ để không bị cắt sát sạt */
-		}
+
+        #matrixContainer {
+            width: fit-content;   /* Quan trọng: Bắt container chỉ rộng bằng ma trận */
+            margin: 20px auto;    /* Căn giữa trên màn hình */
+            background: white;    /* Đảm bảo nền trắng khi chụp */
+            line-height: 0;       /* Loại bỏ khoảng hở dòng nhỏ ở dưới ảnh */
+            padding: 2px;         /* Tạo một đường viền trắng cực nhỏ để không bị cắt sát sạt */
+        }
+
         .hanzi-cell {
             width: 100px; height: 100px; border: 0.5px solid #b6d7a8;
             display: flex; align-items: center; justify-content: center;
@@ -99,30 +141,25 @@
         .floating-menu {
             position: fixed; bottom: 20px; left: 50%;
             transform: translateX(-50%);
-            z-index: 3000; width: 95%; max-width: 500px;
+            z-index: 3000; width: 95%; max-width: 600px;
             display: flex; flex-direction: column; gap: 10px;
         }
 
         /* ---------------------------------------------------------
            3. KÍCH THƯỚC THANH ĐIỀU HƯỚNG TRẮC NGHIỆM (THANH NỔI)
            --------------------------------------------------------- */
-		#quizNavArea {
-			display: none; /* Sẽ được JS chuyển thành flex */
-			background: rgba(255, 255, 255, 0.95);
-			padding: 10px 20px;
-			border-radius: 30px;
-			box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-			
-			/* Căn giữa các phần tử bên trong thanh */
-			align-items: center; 
-			justify-content: space-between;
-			
-			border: 1px solid var(--accent-color);
-			
-			/* CĂN GIỮA CHÍNH THANH NÀY */
-			width: 80%;           /* Độ rộng bạn đã chọn */
-			margin: 0 auto;       /* Đẩy lề trái và phải tự động để vào giữa */
-		}
+        #quizNavArea {
+            display: none; /* Sẽ được JS chuyển thành flex */
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px 20px;
+            border-radius: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            align-items: center; 
+            justify-content: space-between;
+            border: 1px solid var(--accent-color);
+            width: 80%;           
+            margin: 0 auto;       
+        }
 
         .nav-arrow {
             background: #322c2f; color: white; border: none;
@@ -146,6 +183,7 @@
 
         #btnCreate { background: #322c2f; }
         #btnCapture { background: #322c2f; }
+        #btnPdf { background: #28a745; } /* Màu xanh lá đặc trưng nút PDF */
         #btnQuiz { background: #322c2f; }
 
         /* Quiz UI Elements */
@@ -166,18 +204,26 @@
         .option-btn.correct { background: var(--success) !important; color: white; }
         .option-btn.wrong { background: var(--error) !important; color: white; }
 
+        /* CSS phục vụ lúc in/xuất PDF ẩn bộ điều khiển */
+        @media print {
+            body { background: white; padding: 0; padding-bottom: 0; }
+            .floating-menu, textarea, h1, #quizSection { display: none !important; }
+            .container { box-shadow: none; padding: 0; max-width: 100%; }
+            .a4-page { box-shadow: none; margin: 0; page-break-after: always; }
+        }
+
         /* Responsive Mobile */
         @media (max-width: 768px) {
             .matrix-grid { grid-template-columns: repeat(7, 1fr) !important; width: 100% !important; }
             .hanzi-cell { width: auto !important; height: auto !important; aspect-ratio: 1/1; }
             .hanzi-cell .fallback-text { font-size: 5vw; }
             .quiz-card { 
-        width: 70vw;           /* Chiếm 70% chiều ngang màn hình */
-        height: auto;          /* Để height tự động tính toán theo aspect-ratio */
-        aspect-ratio: 1 / 1;   /* Ép khung luôn vuông tuyệt đối */
-        max-width: 280px;      /* Giới hạn kích thước tối đa để không quá to */
-    }
-            #quizSection { margin-top: 90px; } /* Lề trên trắc nghiệm trên mobile */
+                width: 70vw;           
+                height: auto;          
+                aspect-ratio: 1 / 1;   
+                max-width: 280px;      
+            }
+            #quizSection { margin-top: 90px; } 
         }
     </style>
 </head>
@@ -187,7 +233,12 @@
         <div id="mainView">
             <h1 style="color:var(--primary-color); text-align:center; font-size:1.2rem;">TẬP TỰ THẢO THƯ</h1>
             <textarea id="hanziInput" placeholder="Nhập chữ Hán tại đây...">書法藝術</textarea>
-            <div id="matrixContainer"><div id="matrixContent"></div></div>
+            
+            <div id="matrixContainer">
+                <div class="page-container" id="pdfContent">
+                    <div id="matrixContent"></div>
+                </div>
+            </div>
         </div>
 
         <div id="quizSection">
@@ -208,7 +259,8 @@
 
         <div class="main-buttons">
             <button id="btnCreate">TẠO</button>
-            <button id="btnCapture">CHỤP</button>
+            <button id="btnCapture">CHỤP ảnh</button>
+            <button id="btnPdf">XUẤT PDF</button>
             <button id="btnQuiz">TRẮC NGHIỆM</button>
         </div>
     </div>
@@ -224,7 +276,7 @@
         let currentQuizIdx = 0;
         let validCharsWithImages = [];
 
-        // HÀM TẠO MA TRẬN & KIỂM TRA ẢNH
+        // HÀM TẠO MA TRẬN & XEN KẼ HÀNG TRỐNG LUYỆN VIẾT
         async function generateMatrix() {
             showView('main');
             const rawText = document.getElementById('hanziInput').value.trim();
@@ -234,70 +286,126 @@
 
             if (!rawText) return;
 
-            const grid = document.createElement('div');
-            grid.className = 'matrix-grid';
             const chars = rawText.replace(/\s/g, '').split('');
+            
+            // Chia chuỗi ký tự nhập vào thành từng nhóm tối đa 7 từ cho mỗi hàng
+            let rowsData = [];
+            for (let i = 0; i < chars.length; i += 7) {
+                rowsData.push(chars.slice(i, i + 7));
+            }
 
-            for (const char of chars) {
-                const cell = await createCell(char);
-                grid.appendChild(cell);
+            // Tạo khung trang A4 mô phỏng bên trong vùng chứa
+            const a4Page = document.createElement('div');
+            a4Page.className = 'a4-page';
+            const workspace = document.createElement('div');
+            workspace.className = 'workspace';
+            a4Page.appendChild(workspace);
+
+            // Duyệt từng hàng dữ liệu để tạo cụm (Hàng chữ mẫu + Hàng ô trống)
+            for (const rowChars of rowsData) {
+                const rowPair = document.createElement('div');
+                rowPair.className = 'grid-row-pair';
+
+                // 1. Khởi tạo hàng chứa chữ mẫu
+                const textGrid = document.createElement('div');
+                textGrid.className = 'matrix-grid';
+                for (let i = 0; i < 7; i++) {
+                    if (rowChars[i]) {
+                        const cell = await createCell(rowChars[i], false);
+                        textGrid.appendChild(cell);
+                    } else {
+                        // Nếu thiếu ký tự ở hàng cuối, điền ô trống hoàn toàn
+                        const cell = await createCell('', true);
+                        textGrid.appendChild(cell);
+                    }
+                }
+                rowPair.appendChild(textGrid);
+
+                // 2. Khởi tạo hàng trống hoàn toàn xen kẽ bên dưới để người dùng luyện viết
+                const blankGrid = document.createElement('div');
+                blankGrid.className = 'matrix-grid';
+                for (let i = 0; i < 7; i++) {
+                    const cell = await createCell('', true);
+                    blankGrid.appendChild(cell);
+                }
+                rowPair.appendChild(blankGrid);
+
+                workspace.appendChild(rowPair);
             }
-            // Điền ô trống cho đủ hàng 7
-            const remainder = chars.length % 7;
-            if (remainder !== 0) {
-                for (let i = 0; i < 7 - remainder; i++) grid.appendChild(await createCell('', true));
-            }
-            content.appendChild(grid);
+
+            content.appendChild(a4Page);
         }
 
         async function createCell(char, isBlank = false) {
-    const cell = document.createElement('div');
-    cell.className = 'hanzi-cell';
-    
-    // Tạo phần ảnh
-    const img = document.createElement('img');
-    img.src = isBlank ? `${imageDir}OTrong${ext}` : `${imageDir}${encodeURIComponent(char)}${ext}`;
-    
-    return new Promise((resolve) => {
-        img.onload = () => {
-            if(!isBlank) {
-                validCharsWithImages.push(char);
-                // THÊM CHÚ THÍCH VÀO ĐÂY
-                const anno = document.createElement('div');
-                anno.className = 'annotation';
-                anno.textContent = char;
-                cell.appendChild(anno);
-            }
-            cell.appendChild(img);
-            resolve(cell);
-        };
-        img.onerror = () => {
-            if(!isBlank) {
-                cell.innerHTML = `<div class="fallback-text">${char}</div>`;
-            }
-            resolve(cell);
-        };
-    });
-}
+            const cell = document.createElement('div');
+            cell.className = 'hanzi-cell';
+            
+            const img = document.createElement('img');
+            img.src = isBlank ? `${imageDir}OTrong${ext}` : `${imageDir}${encodeURIComponent(char)}${ext}`;
+            
+            return new Promise((resolve) => {
+                img.onload = () => {
+                    if(!isBlank) {
+                        validCharsWithImages.push(char);
+                        const anno = document.createElement('div');
+                        anno.className = 'annotation';
+                        anno.textContent = char;
+                        cell.appendChild(anno);
+                    }
+                    cell.appendChild(img);
+                    resolve(cell);
+                };
+                img.onerror = () => {
+                    if(!isBlank) {
+                        cell.innerHTML = `<div class="fallback-text">${char}</div>`;
+                    }
+                    resolve(cell);
+                };
+            });
+        }
 
-        // HÀM CHỤP ẢNH
-				function capture() {
-			showView('main');
-			const container = document.getElementById('matrixContainer');
-			
-			// Sử dụng scale để tăng độ nét, logging: false để không hiện thông báo rác
-			html2canvas(container, { 
-				scale: 2,
-				backgroundColor: "#ffffff", // Ép nền trắng
-				logging: false,
-				useCORS: true               // Hỗ trợ nếu bạn dùng ảnh từ server khác
-			}).then(canvas => {
-				const link = document.createElement('a');
-				link.download = 'thao-thu.png';
-				link.href = canvas.toDataURL('image/png');
-				link.click();
-			});
-		}
+        // HÀM CHỤP ẢNH MA TRẬN
+        function capture() {
+            showView('main');
+            const container = document.getElementById('matrixContent');
+            if (!container.querySelector('.a4-page')) {
+                alert('Vui lòng nhấn TẠO trước khi chụp ảnh!');
+                return;
+            }
+            
+            html2canvas(container, { 
+                scale: 2,
+                backgroundColor: "#ffffff",
+                logging: false,
+                useCORS: true 
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'thao-thu.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+
+        // HÀM XUẤT FILE PDF TIÊU CHUẨN A4
+        function exportPDF() {
+            showView('main');
+            const element = document.getElementById('pdfContent');
+            if (!element.querySelector('.a4-page')) {
+                alert('Vui lòng nhấn nút "TẠO" trước khi xuất PDF!');
+                return;
+            }
+
+            const opt = {
+                margin:       0,
+                filename:     'tap_viet_thao_thu.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true }, 
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            // Tiến hành tạo và tự động tải file PDF
+            html2pdf().set(opt).from(element).save();
+        }
 
         // HÀM TRẮC NGHIỆM
         function startQuiz() {
@@ -308,7 +416,7 @@
                 char: char,
                 options: generateOptions(char, uniqueValidChars)
             }));
-            quizList.sort(() => Math.random() - 0.5); // Đảo lộn trật tự câu hỏi
+            quizList.sort(() => Math.random() - 0.5); 
             
             currentQuizIdx = 0;
             document.getElementById('totalQuiz').textContent = quizList.length;
@@ -366,7 +474,7 @@
             }
         }
 
-        // Điều hướng tự do
+        // Điều hướng trắc nghiệm tự do
         document.getElementById('prevQuiz').onclick = () => { if(currentQuizIdx > 0) { currentQuizIdx--; showQuestion(); }};
         document.getElementById('nextQuiz').onclick = () => { if(currentQuizIdx < quizList.length - 1) { currentQuizIdx++; showQuestion(); }};
         document.getElementById('currentIdxInput').onchange = (e) => {
@@ -384,7 +492,13 @@
 
         document.getElementById('btnCreate').onclick = generateMatrix;
         document.getElementById('btnCapture').onclick = capture;
+        document.getElementById('btnPdf').onclick = exportPDF;
         document.getElementById('btnQuiz').onclick = startQuiz;
+
+        // Tự động chạy lần đầu khi load ứng dụng
+        window.onload = function() {
+            generateMatrix();
+        };
     </script>
 </body>
 </html>
